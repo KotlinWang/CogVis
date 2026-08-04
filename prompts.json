@@ -1,0 +1,274 @@
+{
+  "version": "20260711-paper-fixed",
+  "profiles": {
+    "paper_fixed_20260711": {
+      "WHU-CD-512": {
+        "Background": [
+          "ground",
+          "road",
+          "vegetation",
+          "asphalt",
+          "pavement"
+        ],
+        "Building": [
+          "building",
+          "roof"
+        ]
+      },
+      "LEVIR-CD-512": {
+        "Background": [
+          "ground",
+          "road",
+          "pavement",
+          "impervious surface",
+          "vegetation",
+          "water"
+        ],
+        "Building": [
+          "building",
+          "roof"
+        ]
+      },
+      "CLCD-512": {
+        "Bareland": [
+          "bare land",
+          "bare soil",
+          "exposed ground"
+        ],
+        "Grass": [
+          "low vegetation",
+          "grassland"
+        ],
+        "Road": [
+          "road",
+          "paved road"
+        ],
+        "Tree": [
+          "tree canopy",
+          "forest"
+        ],
+        "Water": [
+          "water body",
+          "river",
+          "lake"
+        ],
+        "Cropland": [
+          "cropland",
+          "farmland",
+          "agricultural field"
+        ],
+        "Building": [
+          "building",
+          "rooftop",
+          "urban structure"
+        ]
+      },
+      "DSIFN-512": {
+        "Background": [
+          "ground",
+          "road",
+          "vegetation",
+          "farmland",
+          "bare ground",
+          "water"
+        ],
+        "Building": [
+          "urban building",
+          "building",
+          "building rooftop",
+          "roof",
+          "built-up area",
+          "urban structure"
+        ]
+      },
+      "SCSCD": {
+        "Bareland": {
+          "gt_ids": [
+            0
+          ],
+          "prompts": [
+            "bare land",
+            "bare soil",
+            "exposed ground",
+            "barren land"
+          ]
+        },
+        "Water": {
+          "gt_ids": [
+            1
+          ],
+          "prompts": [
+            "water body",
+            "river",
+            "pond",
+            "canal"
+          ]
+        },
+        "Building": {
+          "gt_ids": [
+            2
+          ],
+          "prompts": [
+            "building",
+            "rooftop",
+            "house",
+            "urban structure"
+          ]
+        },
+        "Structure": {
+          "gt_ids": [
+            3
+          ],
+          "prompts": [
+            "greenhouse",
+            "construction structure",
+            "built structure"
+          ]
+        },
+        "Farmland": {
+          "gt_ids": [
+            4
+          ],
+          "prompts": [
+            "farmland",
+            "cropland",
+            "agricultural field"
+          ]
+        },
+        "Vegetation": {
+          "gt_ids": [
+            5
+          ],
+          "prompts": [
+            "vegetation",
+            "tree canopy",
+            "grassland",
+            "forest"
+          ]
+        },
+        "Road": {
+          "gt_ids": [
+            6
+          ],
+          "prompts": [
+            "road",
+            "paved road",
+            "transportation road"
+          ]
+        }
+      },
+      "SECOND": {
+        "Background": {
+          "gt_ids": [
+            0
+          ],
+          "prompts": [
+            "background"
+          ]
+        },
+        "Water": {
+          "gt_ids": [
+            4
+          ],
+          "prompts": [
+            "water body",
+            "river",
+            "lake",
+            "reservoir"
+          ]
+        },
+        "Ground": {
+          "gt_ids": [
+            2
+          ],
+          "prompts": [
+            "bare land",
+            "bare soil",
+            "impervious barren ground",
+            "exposed ground"
+          ]
+        },
+        "Grass": {
+          "gt_ids": [
+            1
+          ],
+          "prompts": [
+            "low vegetation",
+            "grass",
+            "lawn",
+            "shrub",
+            "grassland",
+            "meadow"
+          ]
+        },
+        "Tree": {
+          "gt_ids": [
+            3
+          ],
+          "prompts": [
+            "tree canopy",
+            "forest",
+            "woodland",
+            "trees"
+          ]
+        },
+        "Building": {
+          "gt_ids": [
+            5
+          ],
+          "prompts": [
+            "building",
+            "roof",
+            "house",
+            "structure"
+          ]
+        },
+        "Playground": {
+          "gt_ids": [
+            6
+          ],
+          "prompts": [
+            "playground",
+            "sports field",
+            "running track",
+            "athletic field"
+          ]
+        }
+      }
+    },
+    "collapse_heavy": {
+      "building_support": [
+        "building",
+        "roof",
+        "house",
+        "building footprint",
+        "standing building"
+      ],
+      "damage_prompts": {
+        "no-damage": [
+          "undamaged building",
+          "intact building",
+          "standing intact building"
+        ],
+        "minor-damage": [
+          "slightly damaged building",
+          "minor roof damage",
+          "limited visible damage"
+        ],
+        "major-damage": [
+          "heavily damaged building",
+          "severely damaged building",
+          "partially collapsed building",
+          "major structural damage"
+        ],
+        "destroyed": [
+          "collapsed building",
+          "destroyed building",
+          "completely collapsed building",
+          "building rubble",
+          "debris of a building"
+        ]
+      }
+    }
+  }
+}
