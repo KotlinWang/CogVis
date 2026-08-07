@@ -46,15 +46,76 @@ CogVis reformulates Open-Vocabulary Change Detection as a scene-first **percepti
 
 Results reported in the [CogVis paper](https://arxiv.org/abs/2608.06150):
 
-| Task | Dataset | Metric | Prior best | **CogVis** | Gain |
-|:---|:---|:---:|---:|---:|---:|
-| Semantic CD | SECOND | mIoU | 31.67 | **32.48** | **+0.81** |
-| Semantic CD | SCSCD | mIoU | 23.22 | **25.36** | **+2.14** |
-| Binary CD | CLCD | IoU | 31.48 | **33.67** | **+2.19** |
-| Binary CD | DSIFN | IoU | 47.55 | **48.50** | **+0.95** |
-| Binary CD | LEVIR-CD | IoU | 72.50 | **72.55** | **+0.05** |
-| Binary CD | WHU-CD | IoU | 75.72 | **75.86** | **+0.14** |
-| Damage assessment | xBD | mIoU | 24.51 | **32.68** | **+8.17** |
+<table align="center">
+  <thead>
+    <tr>
+      <th align="left">Task</th>
+      <th align="left">Dataset</th>
+      <th align="center">Metric</th>
+      <th align="center">Prior best</th>
+      <th align="center">CogVis</th>
+      <th align="center">Gain</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="left">Semantic CD</td>
+      <td align="left">SECOND</td>
+      <td align="center">mIoU</td>
+      <td align="center">31.67</td>
+      <td align="center"><strong>32.48</strong></td>
+      <td align="center"><strong>+0.81</strong></td>
+    </tr>
+    <tr>
+      <td align="left">Semantic CD</td>
+      <td align="left">SCSCD</td>
+      <td align="center">mIoU</td>
+      <td align="center">23.22</td>
+      <td align="center"><strong>25.36</strong></td>
+      <td align="center"><strong>+2.14</strong></td>
+    </tr>
+    <tr>
+      <td align="left">Binary CD</td>
+      <td align="left">CLCD</td>
+      <td align="center">IoU</td>
+      <td align="center">31.48</td>
+      <td align="center"><strong>33.67</strong></td>
+      <td align="center"><strong>+2.19</strong></td>
+    </tr>
+    <tr>
+      <td align="left">Binary CD</td>
+      <td align="left">DSIFN</td>
+      <td align="center">IoU</td>
+      <td align="center">47.55</td>
+      <td align="center"><strong>48.50</strong></td>
+      <td align="center"><strong>+0.95</strong></td>
+    </tr>
+    <tr>
+      <td align="left">Binary CD</td>
+      <td align="left">LEVIR-CD</td>
+      <td align="center">IoU</td>
+      <td align="center">72.50</td>
+      <td align="center"><strong>72.55</strong></td>
+      <td align="center"><strong>+0.05</strong></td>
+    </tr>
+    <tr>
+      <td align="left">Binary CD</td>
+      <td align="left">WHU-CD</td>
+      <td align="center">IoU</td>
+      <td align="center">75.72</td>
+      <td align="center"><strong>75.86</strong></td>
+      <td align="center"><strong>+0.14</strong></td>
+    </tr>
+    <tr>
+      <td align="left">Damage assessment</td>
+      <td align="left">xBD</td>
+      <td align="center">mIoU</td>
+      <td align="center">24.51</td>
+      <td align="center"><strong>32.68</strong></td>
+      <td align="center"><strong>+8.17</strong></td>
+    </tr>
+  </tbody>
+</table>
 
 ![Qualitative comparison across seven benchmarks](./assets/qualitative_results.png)
 
