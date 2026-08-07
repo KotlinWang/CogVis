@@ -1,47 +1,50 @@
-# 🌍 CogVis: Must Open-Vocabulary Change Detection Perceive the Scene Anew for Every Query?
+<p align="center">
+  <img src="./assets/cogvis_banner.png" width="620" alt="CogVis illustrated banner">
+</p>
 
-![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white) ![PyTorch](https://img.shields.io/badge/PyTorch-2.5.1-EE4C2C?logo=pytorch&logoColor=white) ![CUDA](https://img.shields.io/badge/CUDA-12.1-76B900?logo=nvidia&logoColor=white) ![Benchmarks](https://img.shields.io/badge/Benchmarks-7-2F6BFF) ![Adapters](https://img.shields.io/badge/Trainable_Adapters-3-A23B72)
+<h1 align="center">CogVis</h1>
 
-## 📰 News
+<p align="center">
+  <strong>Must Open-Vocabulary Change Detection Perceive the Scene Anew for Every Query?</strong>
+</p>
 
-* **`Aug. 04, 2026`**: The CogVis repository now provides seven-benchmark inference, staged adapter training, and paper-locked prompt profiles.
+<p align="center">
+  Perceive the scene once. Recall the right boundary. Verify every region.
+</p>
 
-## ⭐ Overview
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white" alt="Python 3.10">
+  <img src="https://img.shields.io/badge/PyTorch-2.5.1-EE4C2C?logo=pytorch&logoColor=white" alt="PyTorch 2.5.1">
+  <img src="https://img.shields.io/badge/CUDA-12.1-76B900?logo=nvidia&logoColor=white" alt="CUDA 12.1">
+  <img src="https://img.shields.io/badge/Benchmarks-7-2563EB" alt="7 benchmarks">
+  <a href="https://arxiv.org/abs/2608.06150"><img src="https://img.shields.io/badge/arXiv-2608.06150-B31B1B?logo=arxiv&logoColor=white" alt="arXiv paper"></a>
+</p>
 
-![CogVis overview](./assets/cogvis_framework.png)
+> **TL;DR:** CogVis extracts category-agnostic change evidence once, calibrates each text query with semantic memory, and verifies the resulting regions. It achieves the best reported result on all seven evaluated benchmarks while improving inference throughput by **28.50%**.
 
-CogVis is a cognitive memory-guided framework for Open-Vocabulary Change Detection (OVCD). It reorganizes OVCD into a **perception-memory-verification** process: the Scene Change Perceptron extracts reusable temporal evidence once per image pair, the Semantic Memory Calibrator adapts the decision boundary for each text query, and the Adaptive Region Filter verifies candidate regions. SAM3 and CLIP remain frozen, while only three lightweight adapters are trained.
+> ⭐ If CogVis supports your research, consider starring this repository to follow future releases.
 
-> **Perceive the scene once. Recall the right boundary. Verify every region.**
+## ✨ Key Highlights
 
-## ✨ Highlights
+- ⚡ **Query-shared perception:** temporal evidence is computed once per image pair and reused across categories.
+- 🏆 **Seven-benchmark performance:** CogVis leads all evaluated semantic CD, binary CD, and damage-assessment benchmarks.
+- 🧠 **Memory-guided decisions:** query-specific thresholds adapt to scene and category score shifts.
+- 🧩 **Lightweight adaptation:** SAM3 and CLIP remain frozen; only three compact adapters are optimized.
 
-| **7 / 7** | **+28.50%** | **0.230 FPS** | **10.03 s** |
-|:---:|:---:|:---:|:---:|
-| Best reported result on every evaluated benchmark | Higher throughput than the next-fastest method | 4.82 GiB peak memory | Inference with 10 queried categories |
+## 🔥 News
 
-* **Query-shared perception:** temporal evidence is computed once and reused across categories.
-* **Memory-guided calibration:** each image-query pair receives an adaptive threshold.
-* **Reliable prediction:** semantic, temporal, and structural evidence jointly filter candidate regions.
-* **Cross-task evaluation:** semantic CD, binary CD, and building-damage assessment are covered in one framework.
+- **`2026-08-06`**: 📄 The CogVis paper is now available on [arXiv](https://arxiv.org/abs/2608.06150), together with refreshed documentation and visual identity.
+- **`2026-08-04`**: Released seven-benchmark inference, staged adapter training, and paper-locked prompt profiles.
 
-## 🎯 Model Zoo
+## 👀 Overview
 
-Model weights are intentionally excluded from Git. Prepare the following checkpoints and place them under `weights/` before running CogVis:
+CogVis reformulates Open-Vocabulary Change Detection as a scene-first **perception-memory-verification** process. Its temporal prior is shared across queries, while semantic calibration and region verification remain query-specific.
 
-| Component | Used by | Checkpoint | Status |
-|:---|:---|:---|:---:|
-| Change Adapter | Scene Change Perceptron | `change_adapter.pt` | Required |
-| Score Adapter | Semantic Memory Calibrator | `score_adapter.pt` | Required |
-| Gate Adapter | Adaptive Region Filter | `gate_adapter.pt` | Required |
-| SAM3 | Frozen visual backbone | `sam3.pt` | Required |
-| CLIP ViT-B/16 | Frozen text encoder and retrieval | `ViT-B-16.pt` | Required |
+![CogVis framework](./assets/cogvis_framework.png)
 
-If the checkpoint files are stored elsewhere, set `COGVIS_WEIGHT_DIR=/path/to/weights`.
+## 📊 Results
 
-## 🏆 Main Results
-
-The values below are reported in the accompanying anonymous manuscript.
+Results reported in the [CogVis paper](https://arxiv.org/abs/2608.06150):
 
 | Task | Dataset | Metric | Prior best | **CogVis** | Gain |
 |:---|:---|:---:|---:|---:|---:|
@@ -55,18 +58,53 @@ The values below are reported in the accompanying anonymous manuscript.
 
 ![Qualitative comparison across seven benchmarks](./assets/qualitative_results.png)
 
-### ⚡ Efficiency and Query Scaling
+<details>
+<summary><strong>⚡ Efficiency and query scaling</strong></summary>
 
-On an RTX 3090 with 512 x 512 inputs, CogVis reaches **0.230 FPS** with **4.82 GiB** peak memory. Sharing temporal perception improves throughput by **28.50%** over the next-fastest compared method. At 10 queried categories, CogVis requires **10.03 s**, compared with **12.56-956.60 s** for category-wise baselines.
+On an RTX 3090 with 512 x 512 inputs, CogVis reaches **0.230 FPS** with **4.82 GiB** peak memory. At 10 queried categories, it requires **10.03 s**, compared with **12.56-956.60 s** for category-wise baselines.
 
 ![Efficiency and query-scaling analysis](./assets/efficiency_scaling.png)
 
-## 🛰️ Dataset Preparation
+</details>
 
-<details open>
+## 🛠️ Preparation
+
+### Environment
+
+CogVis is tested on Ubuntu with an NVIDIA GPU, CUDA 12.1, and Python 3.10.
+
+```bash
+conda create -n cogvis python=3.10 -y
+conda activate cogvis
+python -m pip install -r requirements.txt
+```
+
+Run all commands below from the repository root.
+
+### Checkpoints
+
+Model weights are intentionally excluded from Git. Place the following files under `weights/`:
+
+| Checkpoint | Component |
+|:---|:---|
+| `change_adapter.pt` | Scene Change Perceptron |
+| `score_adapter.pt` | Semantic Memory Calibrator |
+| `gate_adapter.pt` | Adaptive Region Filter |
+| `sam3.pt` | Frozen SAM3 backbone |
+| `ViT-B-16.pt` | Frozen CLIP encoder |
+
+Use a custom checkpoint directory when needed:
+
+```bash
+export COGVIS_WEIGHT_DIR=/path/to/weights
+```
+
+### Datasets
+
+CA-CDD is used for adapter optimization and memory construction. Six CD datasets and xBD are used for evaluation.
+
+<details>
 <summary><strong>Expected directory structure</strong></summary>
-
-CogVis evaluates six semantic or binary change-detection datasets and the xBD building-damage benchmark. CA-CDD is used only for adapter optimization and memory construction.
 
 ```text
 CogVis/
@@ -92,7 +130,7 @@ CogVis/
     `-- ViT-B-16.pt
 ```
 
-Set custom dataset locations when the data is stored outside the repository:
+For datasets stored outside the repository:
 
 ```bash
 export COGVIS_OVCD_BENCHMARK_ROOT=/path/to/OVCD_Benchmark
@@ -101,35 +139,18 @@ export COGVIS_XBD_ROOT=/path/to/xBD/test
 
 </details>
 
-## 💻 Installation
+## 🎯 Usage
 
-<details open>
-<summary><strong>Create the CogVis environment</strong></summary>
-
-CogVis is tested with Ubuntu, an NVIDIA GPU, CUDA 12.1, and Python 3.10.
-
-```bash
-conda create -n cogvis python=3.10 -y
-conda activate cogvis
-python -m pip install -r requirements.txt
-```
-
-Run all commands below from the CogVis repository root.
-
-Validate the inference and training command contracts without initializing models or writing predictions:
+Validate the command contracts without loading models or writing predictions:
 
 ```bash
 python infer.py --dataset all --dry-run
 python train.py all-adapters --dry-run
 ```
 
-</details>
+### Inference
 
-## 🔍 Inference
-
-### Evaluate all seven benchmarks
-
-This command runs all six semantic or binary datasets and evaluates xBD in seven chunks before merging its metrics:
+Evaluate all seven benchmarks:
 
 ```bash
 python infer.py \
@@ -138,7 +159,7 @@ python infer.py \
   --output-dir outputs/inference
 ```
 
-### Evaluate one semantic dataset
+Evaluate one semantic or binary dataset:
 
 ```bash
 python infer.py \
@@ -150,7 +171,7 @@ python infer.py \
 
 Supported names are `SECOND`, `SCSCD`, `CLCD-512`, `DSIFN-512`, `LEVIR-CD-512`, and `WHU-CD-512`.
 
-### Evaluate xBD
+Evaluate xBD:
 
 ```bash
 python infer.py \
@@ -160,19 +181,9 @@ python infer.py \
   --output-dir outputs/xbd
 ```
 
-| Output | Location |
-|:---|:---|
-| Per-dataset metrics | `outputs/inference/<dataset>/metrics.json` |
-| Merged xBD metrics | `outputs/inference/xBD/metrics.json` |
-| Saved predictions | `<output-dir>/<dataset>/predictions/` |
+### Training
 
-Use `python infer.py --help` for evaluation limits, offsets, chunk selection, and custom dataset roots.
-
-## 🧠 Training
-
-The Change, Score, and Gate Adapters are trained sequentially. The default paper recipe uses **4,968 samples**, **8 shards**, **100 epochs per adapter**, and **seed 2026**.
-
-The Change Adapter requires an FPN cache at `<cache-root>/fpn_cache`. Its labels default to `<benchmark-root>/CACDD/label` unless `--label-dir` is supplied.
+The three adapters are optimized sequentially. The default paper recipe uses 4,968 samples, 8 shards, 100 epochs per adapter, and seed 2026.
 
 ```bash
 python train.py all-adapters \
@@ -183,32 +194,10 @@ python train.py all-adapters \
   --output-dir outputs/training/all
 ```
 
-The resulting checkpoints are:
-
-```text
-outputs/training/all/change/final.pt
-outputs/training/all/score/score_adapter.pt
-outputs/training/all/gate/gate_adapter.pt
-```
-
-Evaluate newly trained adapters without replacing the provided checkpoints:
-
-```bash
-COGVIS_CHANGE_ADAPTER_CHECKPOINT="$PWD/outputs/training/all/change/final.pt" \
-COGVIS_SCORE_ADAPTER_CHECKPOINT="$PWD/outputs/training/all/score/score_adapter.pt" \
-COGVIS_GATE_ADAPTER_CHECKPOINT="$PWD/outputs/training/all/gate/gate_adapter.pt" \
-python infer.py \
-  --dataset all \
-  --device 0 \
-  --output-dir outputs/trained-inference
-```
-
-Individual stages are available as `change-adapter`, `score-adapter`, and `gate-adapter`.
-
-## ⚙️ Configuration
+Individual stages are available as `change-adapter`, `score-adapter`, and `gate-adapter`. Run `python infer.py --help` or `python train.py --help` for the complete option set.
 
 <details>
-<summary><strong>Environment-variable overrides</strong></summary>
+<summary><strong>⚙️ Configuration overrides</strong></summary>
 
 | Variable | Purpose | Default |
 |:---|:---|:---|
@@ -225,33 +214,20 @@ Individual stages are available as `change-adapter`, `score-adapter`, and `gate-
 
 </details>
 
-## 🗂️ Project Structure
-
-<details>
-<summary><strong>Source tree</strong></summary>
-
-```text
-CogVis/
-|-- cogvis/
-|   |-- adapters/       # Change, Score, and Gate adapters
-|   |-- perception/     # Scene Change Perceptron
-|   |-- memory/         # Semantic Memory Calibrator
-|   |-- verification/   # Adaptive Region Filter
-|   `-- runtime/        # Paper-locked runtime
-|-- assets/             # README figures
-|-- infer.py            # Seven-benchmark inference entry point
-|-- train.py            # Staged adapter training
-|-- prompts.json        # Fixed prompt profiles
-|-- requirements.txt
-`-- weights/
-```
-
-</details>
-
 ## 🤝 Acknowledgement
 
-CogVis builds on frozen SAM3 visual features and CLIP ViT-B/16 text embeddings. We thank the authors and maintainers of the foundation models, change-detection benchmarks, and open-source libraries that make this reproduction possible.
+CogVis builds on frozen SAM3 visual features and CLIP ViT-B/16 text embeddings. We thank the authors and maintainers of the foundation models, benchmarks, and open-source libraries that make this reproduction possible.
 
 ## 📄 Citation
 
-This repository accompanies an anonymous submission. Citation metadata will be added after publication.
+If you find CogVis useful in your research, please cite:
+
+```bibtex
+@article{wang2026cogvis,
+  title   = {CogVis: Must Open-Vocabulary Change Detection Perceive the Scene Anew for Every Query?},
+  author  = {Wang, Zijie and Zhong, Chen and He, Wei},
+  journal = {arXiv preprint arXiv:2608.06150},
+  year    = {2026},
+  url     = {https://arxiv.org/abs/2608.06150}
+}
+```
