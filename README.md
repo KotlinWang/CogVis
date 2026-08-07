@@ -146,13 +146,36 @@ Run all commands below from the repository root.
 
 Model weights are intentionally excluded from Git. Place the following files under `weights/`:
 
-| Checkpoint | Component |
-|:---|:---|
-| `change_adapter.pt` | Scene Change Perceptron |
-| `score_adapter.pt` | Semantic Memory Calibrator |
-| `gate_adapter.pt` | Adaptive Region Filter |
-| `sam3.pt` | Frozen SAM3 backbone |
-| `ViT-B-16.pt` | Frozen CLIP encoder |
+<table align="center">
+  <thead>
+    <tr>
+      <th align="left">Checkpoint</th>
+      <th align="left">Component</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="left"><code>change_adapter.pt</code></td>
+      <td align="left">Scene Change Perceptron</td>
+    </tr>
+    <tr>
+      <td align="left"><code>score_adapter.pt</code></td>
+      <td align="left">Semantic Memory Calibrator</td>
+    </tr>
+    <tr>
+      <td align="left"><code>gate_adapter.pt</code></td>
+      <td align="left">Adaptive Region Filter</td>
+    </tr>
+    <tr>
+      <td align="left"><code>sam3.pt</code></td>
+      <td align="left">Frozen SAM3 backbone</td>
+    </tr>
+    <tr>
+      <td align="left"><code>ViT-B-16.pt</code></td>
+      <td align="left">Frozen CLIP encoder</td>
+    </tr>
+  </tbody>
+</table>
 
 Use a custom checkpoint directory when needed:
 
