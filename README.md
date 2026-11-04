@@ -1,138 +1,74 @@
-<p align="center">
-  <img src="./assets/cogvis_banner.png" width="620" alt="CogVis illustrated banner">
-</p>
+# CogVis
 
-<h1 align="center">CogVis</h1>
+CogVis is the paper-aligned implementation of the perception-memory-verification pipeline for open-vocabulary change detection (OVCD) and xBD damage assessment. This directory follows the compact layout of the validated 2026-07-11 package: five top-level files and two required directories contain the complete source, the seven-dataset prompts, all three adapter training paths, inference, and the locked weights.
 
-<p align="center">
-  <strong>Must Open-Vocabulary Change Detection Perceive the Scene Anew for Every Query?</strong>
-</p>
+The shipped inference configuration is the paper configuration with the large-region protection threshold **`eta_a = 0.04` locked explicitly**. `cogvis/commands.py` passes `--component_gate_protect_area_ratio 0.04` on the semantic, xBD, and xBD-instance routes, and the runtime parser defaults are also `0.04`, so the released code cannot silently fall back to the historical `0.02` value.
 
-<p align="center">
-  Perceive the scene once. Recall the right boundary. Verify every region.
-</p>
+## Layout
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white" alt="Python 3.10">
-  <img src="https://img.shields.io/badge/PyTorch-2.5.1-EE4C2C?logo=pytorch&logoColor=white" alt="PyTorch 2.5.1">
-  <img src="https://img.shields.io/badge/CUDA-12.1-76B900?logo=nvidia&logoColor=white" alt="CUDA 12.1">
-  <img src="https://img.shields.io/badge/Benchmarks-7-2563EB" alt="7 benchmarks">
-  <a href="https://arxiv.org/abs/2608.06150"><img src="https://img.shields.io/badge/arXiv-2608.06150-B31B1B?logo=arxiv&logoColor=white" alt="arXiv paper"></a>
-</p>
+```text
+CogVis/
+|-- cogvis/
+|   |-- perception/     SCP and the Change Adapter (A_chg)
+|   |-- memory/         SMC and the Score Adapter (A_score)
+|   |-- verification/   ARF and the Gate Adapter (A_gate)
+|   `-- runtime/        frozen training/inference implementation
+|-- weights/            Change/Score/Gate, SAM3, and CLIP weights
+|-- prompts.json        prompts for all seven datasets
+|-- train.py            sequential adapter training
+|-- infer.py            seven-dataset inference
+|-- README.md
+`-- requirements.txt
+```
 
-> **TL;DR:** CogVis extracts category-agnostic change evidence once, calibrates each text query with semantic memory, and verifies the resulting regions. It achieves the best reported result on all seven evaluated benchmarks while improving inference throughput by **28.50%**.
+Generated training and inference outputs are written to `outputs/` only after a command is run.
 
-> ⭐ If CogVis supports your research, consider starring this repository to follow future releases.
+The canonical public source follows the three decision stages in the paper:
 
-## ✨ Key Highlights
+| Paper term | Source |
+|---|---|
+| Scene Change Perceptron (SCP) | `cogvis/perception/scene_change_perceptron.py` |
+| Change Adapter (A_chg) | `cogvis/perception/change_adapter.py` |
+| Semantic Memory Calibrator (SMC) | `cogvis/memory/semantic_memory_calibrator.py` |
+| Score Adapter (A_score) | `cogvis/memory/score_adapter.py` |
+| Adaptive Region Filter (ARF) | `cogvis/verification/adaptive_region_filter.py` |
+| Gate Adapter (A_gate) | `cogvis/verification/gate_adapter.py` |
 
-- ⚡ **Query-shared perception:** temporal evidence is computed once per image pair and reused across categories.
-- 🏆 **Seven-benchmark performance:** CogVis leads all evaluated semantic CD, binary CD, and damage-assessment benchmarks.
-- 🧠 **Memory-guided decisions:** query-specific thresholds adapt to scene and category score shifts.
-- 🧩 **Lightweight adaptation:** SAM3 and CLIP remain frozen; only three compact adapters are optimized.
+`cogvis/modules/` and `cogvis/adapters/` remain as import-only compatibility aliases and contain no duplicate implementation or alternative experimental branch. `cogvis/runtime/` retains the minimum frozen implementation required by the paper-named facades.
 
-## 🔥 News
+## Locked configuration
 
-- **`2026-08-06`**: 📄 The CogVis paper is now available on [arXiv](https://arxiv.org/abs/2608.06150), together with refreshed documentation and visual identity.
-- **`2026-08-04`**: Released seven-benchmark inference, staged adapter training, and paper-locked prompt profiles.
+| Symbol | Argument | Value |
+|---|---|---:|
+| `K_mem` | `--clip_memory_topk` | 16 |
+| `T_m` | `--clip_memory_temperature` | 0.07 |
+| `tau_r` | `--component_gate_keep_threshold` | 0.60 |
+| `eta_a` | `--component_gate_protect_area_ratio` | **0.04** |
+| adaptive floor | `--cmct_adaptive_floor_scale` | 0.75 |
+| `lambda_abs` | `--memory_delta_weight` | 0.55 |
+| `lambda_dir` | `--memory_transition_weight` | 0.25 |
+| `epsilon_g` | `--memory_bcd_floor` | 0.10 |
+| `lambda_s` | `--memory_stable_suppress` | 0.45 |
+| presence weight | `--memory_presence_delta_weight` | 0.15 |
+| memory bank | CA-CDD source images | 100% (4,968) |
+| stability seeds | `--seed` | 2026-2030 |
 
-## 👀 Overview
+The implemented response is
 
-CogVis reformulates Open-Vocabulary Change Detection as a scene-first **perception-memory-verification** process. Its temporal prior is shared across queries, while semantic calibration and region verification remain query-specific.
+```text
+q_c   = Q_c * [Q_c / (Q_c + C_c + 1e-6)]^2
+D_c   = 0.55 * |q_c^2 - q_c^1| + 0.25 * max(q_c^2 * (1 - q_c^1), q_c^1 * (1 - q_c^2))
+G_c   = 0.10 + 0.90 * B
+S_c   = clip(1 - 0.45 * min(q_c^1, q_c^2) * (1 - B), 0, 1)
+p_c   = 1 + 0.15 * |pi_c^2 - pi_c^1|
+R_c   = clip(D_c * G_c * S_c * p_c, 0, 1)
+```
 
-![CogVis framework](./assets/cogvis_framework.png)
+`eta_a = 0.04` means that a candidate connected region covering at least 4% of the image and containing correlated change pixels is retained without the Gate probability test. Set it to `0.00` only for the protection ablation; see below.
 
-## 📊 Results
+## Environment
 
-Results reported in the [CogVis paper](https://arxiv.org/abs/2608.06150):
-
-<table align="center">
-  <thead>
-    <tr>
-      <th align="left">Task</th>
-      <th align="left">Dataset</th>
-      <th align="center">Metric</th>
-      <th align="center">Prior best</th>
-      <th align="center">CogVis</th>
-      <th align="center">Gain</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="left">Semantic CD</td>
-      <td align="left">SECOND</td>
-      <td align="center">mIoU</td>
-      <td align="center">31.67</td>
-      <td align="center"><strong>32.48</strong></td>
-      <td align="center"><strong>+0.81</strong></td>
-    </tr>
-    <tr>
-      <td align="left">Semantic CD</td>
-      <td align="left">SCSCD</td>
-      <td align="center">mIoU</td>
-      <td align="center">23.22</td>
-      <td align="center"><strong>25.36</strong></td>
-      <td align="center"><strong>+2.14</strong></td>
-    </tr>
-    <tr>
-      <td align="left">Binary CD</td>
-      <td align="left">CLCD</td>
-      <td align="center">IoU</td>
-      <td align="center">31.48</td>
-      <td align="center"><strong>33.67</strong></td>
-      <td align="center"><strong>+2.19</strong></td>
-    </tr>
-    <tr>
-      <td align="left">Binary CD</td>
-      <td align="left">DSIFN</td>
-      <td align="center">IoU</td>
-      <td align="center">47.55</td>
-      <td align="center"><strong>48.50</strong></td>
-      <td align="center"><strong>+0.95</strong></td>
-    </tr>
-    <tr>
-      <td align="left">Binary CD</td>
-      <td align="left">LEVIR-CD</td>
-      <td align="center">IoU</td>
-      <td align="center">72.50</td>
-      <td align="center"><strong>72.55</strong></td>
-      <td align="center"><strong>+0.05</strong></td>
-    </tr>
-    <tr>
-      <td align="left">Binary CD</td>
-      <td align="left">WHU-CD</td>
-      <td align="center">IoU</td>
-      <td align="center">75.72</td>
-      <td align="center"><strong>75.86</strong></td>
-      <td align="center"><strong>+0.14</strong></td>
-    </tr>
-    <tr>
-      <td align="left">Damage assessment</td>
-      <td align="left">xBD</td>
-      <td align="center">mIoU</td>
-      <td align="center">24.51</td>
-      <td align="center"><strong>32.68</strong></td>
-      <td align="center"><strong>+8.17</strong></td>
-    </tr>
-  </tbody>
-</table>
-
-![Qualitative comparison across seven benchmarks](./assets/qualitative_results.png)
-
-<details>
-<summary><strong>⚡ Efficiency and query scaling</strong></summary>
-
-On an RTX 3090 with 512 x 512 inputs, CogVis reaches **0.230 FPS** with **4.82 GiB** peak memory. At 10 queried categories, it requires **10.03 s**, compared with **12.56-956.60 s** for category-wise baselines.
-
-![Efficiency and query-scaling analysis](./assets/efficiency_scaling.png)
-
-</details>
-
-## 🛠️ Preparation
-
-### Environment
-
-CogVis is tested on Ubuntu with an NVIDIA GPU, CUDA 12.1, and Python 3.10.
+The verified server environment is Ubuntu, Python 3.10.20, CUDA 12.1, PyTorch 2.5.1+cu121, and an NVIDIA RTX 3090.
 
 ```bash
 conda create -n cogvis python=3.10 -y
@@ -140,178 +76,161 @@ conda activate cogvis
 python -m pip install -r requirements.txt
 ```
 
-Run all commands below from the repository root.
+The default dataset paths point to the server 107 benchmark layout. On another machine, pass `--benchmark-root` and `--xbd-root` explicitly, or set `COGVIS_OVCD_BENCHMARK_ROOT` and `COGVIS_XBD_ROOT`.
 
-### Checkpoints
+The expected OVCD benchmark root contains `CACDD`, `SECOND`, `SCSCD`, `CLCD-512`, `DSIFN-512`, `LEVIR-CD-512`, and `WHU-CD-512`. The xBD argument points to its `test` directory containing `images`, `labels`, and `targets`.
 
-Model weights are intentionally excluded from Git. Place the following files under `weights/`:
+## Weights
 
-<table align="center">
-  <thead>
-    <tr>
-      <th align="left">Checkpoint</th>
-      <th align="left">Component</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="left"><code>change_adapter.pt</code></td>
-      <td align="left">Scene Change Perceptron</td>
-    </tr>
-    <tr>
-      <td align="left"><code>score_adapter.pt</code></td>
-      <td align="left">Semantic Memory Calibrator</td>
-    </tr>
-    <tr>
-      <td align="left"><code>gate_adapter.pt</code></td>
-      <td align="left">Adaptive Region Filter</td>
-    </tr>
-    <tr>
-      <td align="left"><code>sam3.pt</code></td>
-      <td align="left">Frozen SAM3 backbone</td>
-    </tr>
-    <tr>
-      <td align="left"><code>ViT-B-16.pt</code></td>
-      <td align="left">Frozen CLIP encoder</td>
-    </tr>
-  </tbody>
-</table>
+All five weight files are required in `weights/` (about 4.1 GB total). The local release package ships them, but the GitHub repository does not track them: ordinary Git blobs cannot carry the large SAM3 and CLIP files. Place the files in `weights/` from the validated weight store, Git LFS, or the release assets. The validated hashes are:
 
-Use a custom checkpoint directory when needed:
+| File | SHA-256 |
+|---|---|
+| `change_adapter.pt` | `a3fb0e6d59943b9b66f407f84e22ce6b9875bbe567cef75cfec604d05b5f9844` |
+| `score_adapter.pt` | `bf65af28ef4d1d51bd67f822f64a8547a15cb89efaeb90fb37f01519540589c8` |
+| `gate_adapter.pt` | `a713dc5e14ffa46a0ecf1612e3c58e9a7d72ef0a2bfeccb1abccbb9197700fa5` |
+| `sam3.pt` | `9999e2341ceef5e136daa386eecb55cb414446a00ac2b55eb2dfd2f7c3cf8c9e` |
+| `ViT-B-16.pt` | `5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f` |
+
+The repository's `.gitignore` excludes `weights/`. For publication, attach these files to a GitHub Release or store them with Git LFS, and preserve the filenames and hashes above; ordinary GitHub blobs cannot carry the large SAM3 and CLIP files.
+
+## Inference
+
+Run one of the seven datasets:
 
 ```bash
-export COGVIS_WEIGHT_DIR=/path/to/weights
+python infer.py --dataset SECOND --device 0
+python infer.py --dataset SCSCD --device 0
+python infer.py --dataset CLCD-512 --device 0
+python infer.py --dataset DSIFN-512 --device 0
+python infer.py --dataset LEVIR-CD-512 --device 0
+python infer.py --dataset WHU-CD-512 --device 0
+python infer.py --dataset xBD --num-chunks 7 --device 0
 ```
 
-### Datasets
-
-CA-CDD is used for adapter optimization and memory construction. Six CD datasets and xBD are used for evaluation.
-
-<details>
-<summary><strong>Expected directory structure</strong></summary>
-
-```text
-CogVis/
-|-- data/
-|   |-- OVCD_Benchmark/
-|   |   |-- CACDD/
-|   |   |-- SECOND/
-|   |   |-- SCSCD/
-|   |   |-- CLCD-512/
-|   |   |-- DSIFN-512/
-|   |   |-- LEVIR-CD-512/
-|   |   `-- WHU-CD-512/
-|   `-- xBD/
-|       `-- test/
-|           |-- images/
-|           |-- labels/
-|           `-- targets/
-`-- weights/
-    |-- change_adapter.pt
-    |-- score_adapter.pt
-    |-- gate_adapter.pt
-    |-- sam3.pt
-    `-- ViT-B-16.pt
-```
-
-For datasets stored outside the repository:
+Run all seven and merge the seven xBD chunks:
 
 ```bash
-export COGVIS_OVCD_BENCHMARK_ROOT=/path/to/OVCD_Benchmark
-export COGVIS_XBD_ROOT=/path/to/xBD/test
+python infer.py --dataset all --device 0
 ```
 
-</details>
-
-## 🎯 Usage
-
-Validate the command contracts without loading models or writing predictions:
+For a fast contract check that does not initialize the models or write outputs:
 
 ```bash
 python infer.py --dataset all --dry-run
+```
+
+Use `--save-predictions` for semantic prediction PNGs. xBD always writes its raw prediction PNG because the retained evaluator uses those files as part of its output contract. A bare runtime evaluator call now defaults to the complete evaluation split (`--eval_limit 0`); pass a positive limit only for smoke tests.
+
+### Optional native xBD instance export
+
+The pixel five-state xBD mIoU remains the paper metric. The optional instance route reuses exactly the same frozen model and threshold flags and exports native instance evidence:
+
+```bash
+python infer.py --dataset xBD-instances \
+  --manifest /path/to/materialized_inputs.jsonl \
+  --device 0
+```
+
+Each manifest line provides `pre_rgb`, `post_rgb`, and `valid_mask` `.npy` paths. The route writes per-instance evidence and does not change the pixel metric.
+
+## Training
+
+The three paper adapters are trained through one entry point in the paper's required order: Change, Score, then Gate. The defaults lock the 4,968-image CA-CDD recipe, eight 621-image shards, 100 epochs, and seed 2026.
+
+```bash
+python train.py change-adapter --device 0
+python train.py score-adapter --device 0
+python train.py gate-adapter --device 0
+python train.py all-adapters --device 0
+```
+
+The former short commands `change`, `score`, `gate`, and `all` remain accepted aliases. Output directory names and checkpoint filenames remain unchanged to preserve prior run compatibility.
+
+`change-adapter` optimizes the SCP Change Adapter and automatically constructs a read-only cache view containing only `/data/kotlin/weights/fpn_cache`. This is intentional: the newer FP16 `fpn_mmap` cache is not part of the locked best-checkpoint lineage. The Change recipe uses `temporal_gate_v4`, active/gate level 2, BF16 AMP, batch 16, learning rate `5e-4`, and the paper loss weights.
+
+`score-adapter` constructs the SMC memory from eight shards and fits the Score Adapter with batch 128. `gate-adapter` collects ARF candidate-region shards and fits the Gate Adapter with batch 4096, the threshold grid `0.20:0.80:0.05`, and the locked `eta_a = 0.04`. Existing shards can be reused:
+
+```bash
+python train.py score-adapter --shards-glob '/path/to/score_shards/*.pt' --reuse-shards --device 0
+python train.py gate-adapter --shards-glob '/path/to/gate_shards/*.pt' --reuse-shards --device 0
+```
+
+Inspect the complete commands without creating files:
+
+```bash
 python train.py all-adapters --dry-run
 ```
 
-### Inference
-
-Evaluate all seven benchmarks:
+Fresh outputs are placed under `outputs/training/`. To evaluate newly trained adapters without replacing the locked weights:
 
 ```bash
-python infer.py \
-  --dataset all \
-  --device 0 \
-  --output-dir outputs/inference
+COGVIS_CHANGE_ADAPTER_CHECKPOINT=/path/to/change/final.pt \
+COGVIS_SCORE_ADAPTER_CHECKPOINT=/path/to/score/score_adapter.pt \
+COGVIS_GATE_ADAPTER_CHECKPOINT=/path/to/gate/gate_adapter.pt \
+python infer.py --dataset DSIFN-512 --device 0
 ```
 
-Evaluate one semantic or binary dataset:
+## Reproduction status
 
-```bash
-python infer.py \
-  --dataset SECOND \
-  --device 0 \
-  --save-predictions \
-  --output-dir outputs/second
+The shipped checkpoints are the validated 2026-07-11 weights and reproduce the retained inference path. The compact entry point produces the full seven-dataset command set; the only intentional change from the 2026-07-11 command contract is the explicit `eta_a = 0.04` protection flag. A fresh full DSIFN-512 run on server 107 produced IoU `0.4852350242608666`, and fresh DSIFN/xBD canaries matched their reference prediction hashes.
+
+The manuscript Table 1 values come from the original single-checkpoint run:
+
+| Dataset | Metric | Value |
+|---|---:|---:|
+| SECOND | mIoU | 32.48 |
+| SCSCD | mIoU | 25.36 |
+| CLCD-512 | IoU | 33.67 |
+| DSIFN-512 | IoU | 48.50 |
+| LEVIR-CD-512 | IoU | 72.55 |
+| WHU-CD-512 | IoU | 75.86 |
+| xBD | mIoU | 32.68 |
+
+The 2026-10-28 full-data stability series retrained all three adapters for five independent seeds (2026-2030) under the locked `keep = 0.60 / protect = 0.04 / floor = 0.75` protocol and evaluated every target test set with each of the same five models:
+
+| Dataset | Metric | Test pairs/seed | Mean +/- sample SD |
+|---|---:|---:|---:|
+| SECOND | mIoU | 1,694 | 32.36 +/- 0.14 |
+| SCSCD | mIoU | 322 | 26.38 +/- 0.35 |
+| CLCD-512 | IoU | 120 | 34.70 +/- 1.12 |
+| DSIFN-512 | IoU | 48 | 50.36 +/- 0.38 |
+| LEVIR-CD-512 | IoU | 512 | 73.87 +/- 0.24 |
+| WHU-CD-512 | IoU | 660 | 78.23 +/- 0.52 |
+| xBD | mIoU | 933 | 32.62 +/- 0.05 |
+
+The standard deviations are sample standard deviations (`ddof=1`, percentage points). This is a new locked-protocol repetition series, not a pure seed replay of the original submission checkpoint: the original SCP metadata is incomplete and the historical Gate record used a different configuration. It therefore quantifies training repeatability and should not be used to reinterpret the original table's single-seed margins as statistically significant.
+
+### Large-region protection ablation
+
+The `eta_a = 0.04` value is kept as the global default. Disabling the exemption (`eta_a = 0.00`) on the same five checkpoints and full test sets gives:
+
+| Dataset | `eta_a = 0.04` | `eta_a = 0.00` | Delta |
+|---|---:|---:|---:|
+| SECOND | 32.36 | 32.42 | +0.05 |
+| SCSCD | 26.38 | 26.78 | +0.41 |
+| CLCD-512 | 34.70 | 34.77 | +0.08 |
+| DSIFN-512 | 50.36 | 49.87 | -0.48 |
+| LEVIR-CD-512 | 73.87 | 73.87 | 0.00 |
+| WHU-CD-512 | 78.23 | 78.27 | +0.04 |
+| xBD | 32.62 | 32.62 | 0.00 |
+
+The two large effects cancel (SCSCD improves by 0.41, DSIFN drops by 0.48); the unweighted mean change is +0.01 percentage points. The exemption is therefore retained as a fixed design choice rather than tuned per dataset on the test sets.
+
+To reproduce the `eta_a = 0.00` row without editing files, use the Python facade:
+
+```python
+from pathlib import Path
+from cogvis.pipeline import CogVis
+
+runner = CogVis()
+runner.run_semantic(
+    dataset="SCSCD",
+    output_json=Path("outputs/protect0/SCSCD/metrics.json"),
+    extra_args=["--component_gate_protect_area_ratio", "0.00"],
+)
 ```
 
-Supported names are `SECOND`, `SCSCD`, `CLCD-512`, `DSIFN-512`, `LEVIR-CD-512`, and `WHU-CD-512`.
+The training code is executable and seeds all three frozen runtime trainers through one deterministic wrapper. Exact bitwise recovery of the historical best weights cannot be claimed: the original Score shards were deleted, the original Gate shards were replaced by a statistically matching recollection, and the retained memory trainer evolved after the final checkpoint was produced. New full training must therefore be evaluated before claiming that it reaches the historical table values.
 
-Evaluate xBD:
-
-```bash
-python infer.py \
-  --dataset xBD \
-  --num-chunks 7 \
-  --device 0 \
-  --output-dir outputs/xbd
-```
-
-### Training
-
-The three adapters are optimized sequentially. The default paper recipe uses 4,968 samples, 8 shards, 100 epochs per adapter, and seed 2026.
-
-```bash
-python train.py all-adapters \
-  --benchmark-root "$COGVIS_OVCD_BENCHMARK_ROOT" \
-  --cache-root /path/to/cache-parent \
-  --clip-cache-dir "${COGVIS_WEIGHT_DIR:-$PWD/weights}" \
-  --device 0 \
-  --output-dir outputs/training/all
-```
-
-Individual stages are available as `change-adapter`, `score-adapter`, and `gate-adapter`. Run `python infer.py --help` or `python train.py --help` for the complete option set.
-
-<details>
-<summary><strong>⚙️ Configuration overrides</strong></summary>
-
-| Variable | Purpose | Default |
-|:---|:---|:---|
-| `COGVIS_OVCD_BENCHMARK_ROOT` | CA-CDD and six evaluation datasets | `data/OVCD_Benchmark` |
-| `COGVIS_XBD_ROOT` | xBD test split | `data/xBD/test` |
-| `COGVIS_WEIGHT_DIR` | Adapter and foundation-model weights | `weights` |
-| `COGVIS_RESULTS_DIR` | Inference and training outputs | `outputs` |
-| `COGVIS_PROMPTS` | Paper-locked prompt profiles | `prompts.json` |
-| `COGVIS_CHANGE_ADAPTER_CHECKPOINT` | Change Adapter override | `weights/change_adapter.pt` |
-| `COGVIS_SCORE_ADAPTER_CHECKPOINT` | Score Adapter override | `weights/score_adapter.pt` |
-| `COGVIS_GATE_ADAPTER_CHECKPOINT` | Gate Adapter override | `weights/gate_adapter.pt` |
-| `COGVIS_SAM3_CHECKPOINT` | SAM3 checkpoint override | `weights/sam3.pt` |
-| `COGVIS_CLIP_CACHE_DIR` | CLIP checkpoint directory | `weights` |
-
-</details>
-
-## 🤝 Acknowledgement
-
-CogVis builds on frozen SAM3 visual features and CLIP ViT-B/16 text embeddings. We thank the authors and maintainers of the foundation models, benchmarks, and open-source libraries that make this reproduction possible.
-
-## 📄 Citation
-
-If you find CogVis useful in your research, please cite:
-
-```bibtex
-@article{wang2026cogvis,
-  title   = {CogVis: Must Open-Vocabulary Change Detection Perceive the Scene Anew for Every Query?},
-  author  = {Wang, Zijie and Zhong, Chen and He, Wei},
-  journal = {arXiv preprint arXiv:2608.06150},
-  year    = {2026},
-  url     = {https://arxiv.org/abs/2608.06150}
-}
-```
+Release verification (2026-11-03): the source compiles; `python infer.py --dataset all --dry-run` expands to six semantic commands, seven xBD chunk commands, and one merge, with `protect = 0.04` on every gated route; the 56 targeted contract tests pass with the pixel-route golden fixture updated for the explicit flag; and all five weight hashes match `weights/SHA256SUMS` in the local release package.

@@ -13,7 +13,7 @@ from cogvis.paths import OVCD_BENCHMARK_ROOT, RESULTS_DIR, XBD_ROOT
 from cogvis.pipeline import CogVis
 
 
-DATASETS = (*SEMANTIC_DATASETS, "xBD", "all")
+DATASETS = (*SEMANTIC_DATASETS, "xBD", "xBD-instances", "all")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,6 +27,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--num-chunks", type=int)
     parser.add_argument("--chunk-index", type=int)
     parser.add_argument("--save-predictions", action="store_true")
+    parser.add_argument("--manifest", type=Path,
+                        help="materialised input manifest JSONL (pre_rgb/post_rgb/valid_mask .npy paths); "
+                             "required by --dataset xBD-instances")
+    parser.add_argument("--instance-method", default="cogvis_xbd_bda_instance_adapted")
+    parser.add_argument("--instance-split", default="test_cross_event")
     parser.add_argument("--device", help="CUDA_VISIBLE_DEVICES value, for example 0")
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--dry-run", action="store_true")
@@ -103,6 +108,27 @@ def xbd_runs(
     return results
 
 
+def instance_run(
+    runner: CogVis,
+    output_root: Path,
+    args: argparse.Namespace,
+):
+    if args.manifest is None:
+        raise SystemExit(
+            "--dataset xBD-instances needs --manifest (materialised input manifest JSONL with "
+            "pre_rgb / post_rgb / valid_mask .npy paths)"
+        )
+    return runner.run_xbd_instances(
+        manifest=args.manifest,
+        output_dir=output_root / "xBD-instances" / args.instance_method,
+        method_name=args.instance_method,
+        split=args.instance_split,
+        limit=args.eval_limit,
+        offset=args.eval_offset,
+        dry_run=args.dry_run,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     runner = CogVis(python=args.python, cuda_visible_devices=args.device)
@@ -112,6 +138,8 @@ def main(argv: list[str] | None = None) -> int:
         results.append(semantic_run(runner, args.dataset, args.output_dir, args))
     elif args.dataset == "xBD":
         results.extend(xbd_runs(runner, args.output_dir, args))
+    elif args.dataset == "xBD-instances":
+        results.append(instance_run(runner, args.output_dir, args))
     else:
         for dataset in SEMANTIC_DATASETS:
             results.append(semantic_run(runner, dataset, args.output_dir, args))

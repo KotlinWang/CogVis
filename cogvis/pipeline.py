@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
-from .commands import semantic_command, xbd_command, xbd_merge_command
+from .commands import semantic_command, xbd_command, xbd_instance_command, xbd_merge_command
 from .paths import OVCD_BENCHMARK_ROOT, XBD_ROOT
 from .paths import require_runtime_layout
 
@@ -111,3 +111,35 @@ class CogVis:
         output_dir.mkdir(parents=True, exist_ok=True)
         env = os.environ.copy()
         return subprocess.run(command, check=True, env=env)
+
+    def run_xbd_instances(
+        self,
+        manifest: Path,
+        output_dir: Path,
+        method_name: str = "cogvis_xbd_bda_instance_adapted",
+        split: str = "test_cross_event",
+        limit: int = 0,
+        offset: int = 0,
+        extra_args: Sequence[str] = (),
+        dry_run: bool = False,
+    ):
+        """Native instance export over the frozen xBD BDA forward.
+
+        Runs the same model and thresholds as :meth:`run_xbd`; the difference is
+        the evidence sink and the instance-level outputs, not the model.
+        """
+        if not dry_run:
+            output_dir.mkdir(parents=True, exist_ok=True)
+        return self._run(
+            xbd_instance_command(
+                manifest=manifest,
+                output_dir=output_dir,
+                method_name=method_name,
+                split=split,
+                limit=limit,
+                offset=offset,
+                python=self.python,
+                extra_args=extra_args,
+            ),
+            dry_run=dry_run,
+        )

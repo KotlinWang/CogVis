@@ -1,4 +1,6 @@
 # Model checkpoints and local datasets
+# The five release weights are distributed outside Git (about 4.1 GB); use
+# Git LFS or a release asset and keep the filenames documented in README.md.
 weights/
 data/
 

@@ -7508,7 +7508,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--train_offset", type=int, default=0)
     parser.add_argument("--source_val_limit", type=int, default=2)
     parser.add_argument("--source_val_offset", type=int, default=128)
-    parser.add_argument("--eval_limit", type=int, default=2)
+    parser.add_argument("--eval_limit", type=int, default=0)
     parser.add_argument("--eval_offset", type=int, default=0)
 
     parser.add_argument("--module_type", type=str, default="auto", choices=["auto", "temporal_lora", "temporal_gate_v4", "mdfm"])
@@ -7890,7 +7890,7 @@ def add_cmct_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--component_gate_topk_ratio", type=float, default=0.2)
     parser.add_argument("--component_gate_min_area", type=int, default=8)
     parser.add_argument("--component_gate_max_area", type=int, default=262144)
-    parser.add_argument("--component_gate_protect_area_ratio", type=float, default=0.02)
+    parser.add_argument("--component_gate_protect_area_ratio", type=float, default=0.04)
     parser.add_argument("--component_gate_label_overlap", type=float, default=0.30)
     parser.add_argument("--component_gate_label_gt_cover", type=float, default=0.05)
     parser.add_argument("--component_gate_label_min_pixels", type=int, default=8)

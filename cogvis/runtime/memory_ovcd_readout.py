@@ -26,13 +26,13 @@ from posterior_ovcd import (
 class MemoryReadoutConfig:
     """Hyperparameters for memory-rectified posterior change scores."""
 
-    delta_weight: float = 0.65
-    transition_weight: float = 0.35
+    delta_weight: float = 0.55
+    transition_weight: float = 0.25
     bcd_alpha: float = 1.0
-    bcd_floor: float = 0.15
+    bcd_floor: float = 0.10
     stable_suppress: float = 0.45
     stable_power: float = 1.0
-    support_boost: float = 0.10
+    support_boost: float = 0.0
     presence_delta_weight: float = 0.15
     robust_normalize: bool = False
     q_low: float = 0.02

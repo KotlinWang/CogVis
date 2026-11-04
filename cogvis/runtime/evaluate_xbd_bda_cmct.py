@@ -33,6 +33,11 @@ import train_clip_memory_threshold as cmct  # noqa: E402
 from clip_memory_threshold import ClipFeatureExtractor, ClipPairEmbedding  # noqa: E402
 from memory_ovcd_readout import memory_rectified_score  # noqa: E402
 from posterior_ovcd import build_posterior_inputs, competitive_posteriors, extract_class_scores  # noqa: E402
+from xbd_evidence import (  # noqa: E402
+    accumulate_tile_evidence,
+    finish_single_image_evidence,
+    new_image_evidence,
+)
 
 
 DEFAULT_REPO = Path(
@@ -139,7 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
     _set_parser_default(parser, "target_datasets", "xBD")
     _set_parser_default(parser, "train_limit", 0)
     _set_parser_default(parser, "source_val_limit", 0)
-    _set_parser_default(parser, "eval_limit", 2)
+    _set_parser_default(parser, "eval_limit", 0)
     _set_parser_default(parser, "eval_offset", 0)
     _set_parser_default(parser, "bcd_score_mode", "head")
     _set_parser_default(parser, "cmct_adaptive_floor_scale", 0.75)
@@ -491,7 +496,15 @@ def predict_xbd_sample(
     component_model,
     image_a: Optional[Image.Image] = None,
     image_b: Optional[Image.Image] = None,
+    evidence: Optional[Dict[str, object]] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, float]]:
+    """Frozen BDA forward for one image pair.
+
+    ``evidence`` (opt-in) additionally records the *native* continuous maps and
+    the raw SAM3 PRE building-prompt masks this forward already computes but
+    otherwise discards.  When it is ``None`` the returned pixel arrays, the
+    diagnostics and every cost of this function are exactly the frozen route.
+    """
     cfg = base._memory_config_from_args(args)
     if image_a is None or image_b is None:
         image_a = Image.open(item["a"]).convert("RGB")
@@ -503,7 +516,12 @@ def predict_xbd_sample(
         pair_embedding = encode_pair_from_pil(clipper, image_a, image_b)
     meta, _, _, size_hw = predict_change_from_pil(processor, change_module, image_a, image_b, args, device)
     class_names = ["Building"]
-    scores_a, presence_a = extract_class_scores(processor, meta["state_a"], BUILDING_PROMPTS, class_names)
+    # Every building prompt overwrites `state_a["masks"]`, so the native
+    # per-instance masks are snapshotted inside the grounding pass itself.
+    pre_prompt_captures: Optional[Dict[str, list]] = {} if evidence is not None else None
+    scores_a, presence_a = extract_class_scores(
+        processor, meta["state_a"], BUILDING_PROMPTS, class_names, capture=pre_prompt_captures,
+    )
     scores_b, presence_b = extract_class_scores(processor, meta["state_b"], BUILDING_PROMPTS, class_names)
     posterior = build_posterior_inputs(
         scores_a,
@@ -624,7 +642,33 @@ def predict_xbd_sample(
     for key_diag, value in diag.items():
         if isinstance(value, (int, float, bool)) and math.isfinite(float(value)):
             diagnostics[f"cmct_{key_diag}"] = float(value)
+    if evidence is not None:
+        evidence.update({
+            "size_hw": (int(size_hw[0]), int(size_hw[1])),
+            "prompt_captures": pre_prompt_captures,
+            "change_score": score.detach().float().cpu().numpy(),
+            "bcd_score": meta["bcd_score"].detach().float().cpu().numpy(),
+            "building_score": building_score,
+            "damage_state_scores": np.asarray(damage_post, dtype=np.float32),
+            "damage_candidate": damage_candidate,
+            "building_support": building_support,
+            "pred_clf": pred_clf,
+            "thresholds": [{
+                "base_threshold": float(base_threshold),
+                "tau_corr": float(tau_corr),
+                "corr_threshold": float(corr_threshold),
+                "building_support_threshold": float(args.building_support_threshold),
+                "damage_confidence_threshold": float(args.damage_confidence_threshold),
+                "serious_damage_threshold": float(args.serious_damage_threshold),
+                "component_gate_keep_threshold": float(args.component_gate_keep_threshold),
+                "sam3_confidence_threshold": float(getattr(processor, "confidence_threshold", float("nan"))),
+            }],
+        })
     return pred_full, pred_clf, pred_loc, diagnostics
+
+
+# The evidence plumbing (full-image buffers, prompt-snapshot flattening, tile
+# placement) lives in :mod:`xbd_evidence`, where it is reachable without torch.
 
 
 def tile_starts(length: int, tile_size: int, stride: int) -> List[int]:
@@ -649,16 +693,22 @@ def predict_xbd_sample_tiled(
     bank,
     correction_model,
     component_model,
+    evidence: Optional[Dict[str, object]] = None,
+    images: Optional[Tuple[Image.Image, Image.Image]] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, float]]:
-    with Image.open(item["a"]) as img_a_src:
-        img_a = img_a_src.convert("RGB")
-    with Image.open(item["b"]) as img_b_src:
-        img_b = img_b_src.convert("RGB")
+    if images is not None:
+        img_a = images[0].convert("RGB")
+        img_b = images[1].convert("RGB")
+    else:
+        with Image.open(item["a"]) as img_a_src:
+            img_a = img_a_src.convert("RGB")
+        with Image.open(item["b"]) as img_b_src:
+            img_b = img_b_src.convert("RGB")
     w, h = img_a.size
     tile_size = int(getattr(args, "tile_size", 512))
     tile_stride = int(getattr(args, "tile_stride", tile_size))
     if tile_size <= 0 or (tile_size >= max(h, w) and tile_stride >= max(h, w)):
-        return predict_xbd_sample(
+        result = predict_xbd_sample(
             args,
             item,
             processor,
@@ -670,10 +720,28 @@ def predict_xbd_sample_tiled(
             component_model,
             image_a=img_a,
             image_b=img_b,
+            evidence=evidence,
         )
+        if evidence is not None:
+            # A single non-tiled pair: its raw captures are already on the native grid.
+            finish_single_image_evidence(evidence, (0, 0))
+            evidence["tile_size"] = int(tile_size)
+            evidence["tile_stride"] = int(tile_stride)
+        return result
 
     ys = tile_starts(h, tile_size, tile_stride)
     xs = tile_starts(w, tile_size, tile_stride)
+    if evidence is not None:
+        overlaps = any(b - a < tile_size for a, b in zip(ys, ys[1:])) or any(
+            b - a < tile_size for a, b in zip(xs, xs[1:])
+        )
+        if overlaps:
+            raise ValueError(
+                "native instance evidence requires non-overlapping tiles: overlapping tiles emit the "
+                f"same object as several tile-local masks and cannot be de-duplicated without a "
+                f"stitching step (tile_size={tile_size}, tile_stride={tile_stride})"
+            )
+        evidence.update(new_image_evidence((int(h), int(w))))
     full_votes = np.zeros((5, h, w), dtype=np.float32)
     clf_votes = np.zeros((4, h, w), dtype=np.float32)
     loc_votes = np.zeros((h, w), dtype=np.float32)
@@ -686,6 +754,7 @@ def predict_xbd_sample_tiled(
             box = (x0, y0, x1, y1)
             tile_a = img_a.crop(box)
             tile_b = img_b.crop(box)
+            tile_evidence: Optional[Dict[str, object]] = {} if evidence is not None else None
             tile_pred, tile_clf, tile_loc, diag = predict_xbd_sample(
                 args,
                 item,
@@ -698,9 +767,13 @@ def predict_xbd_sample_tiled(
                 component_model,
                 image_a=tile_a,
                 image_b=tile_b,
+                evidence=tile_evidence,
             )
             th, tw = tile_pred.shape
             target = np.s_[y0:y0 + th, x0:x0 + tw]
+            if evidence is not None:
+                origin = (int(x0), int(y0))
+                accumulate_tile_evidence(evidence, tile_evidence, origin, (th, tw))
             for cls_id in range(5):
                 full_votes[(cls_id,) + target] += (tile_pred == cls_id).astype(np.float32)
             for cls_id in range(1, 5):
@@ -724,6 +797,8 @@ def predict_xbd_sample_tiled(
         "tau_corr_min": float(np.min([d.get("tau_corr", 0.0) for d in tile_diags])) if tile_diags else 0.0,
         "tau_corr_max": float(np.max([d.get("tau_corr", 0.0) for d in tile_diags])) if tile_diags else 0.0,
     }
+    if evidence is not None:
+        evidence["pred_clf"] = pred_clf
     return pred_full, pred_clf, pred_loc, diagnostics
 
 

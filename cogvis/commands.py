@@ -1,4 +1,8 @@
-"""Exact command contract for the locked 2026-07-11 paper configuration."""
+"""Exact command contract for the locked 2026-07-11 paper configuration.
+
+The 2026-11-03 release makes the paper's large-region protection threshold
+(``eta_a = 0.04``) explicit on every route; all other flags are unchanged.
+"""
 
 from __future__ import annotations
 
@@ -27,6 +31,60 @@ SEMANTIC_DATASETS = (
     "LEVIR-CD-512",
     "WHU-CD-512",
 )
+
+
+XBD_FROZEN_MODEL_ARGS = (
+    "--checkpoint",
+    "--sam3_checkpoint",
+    "--load_checkpoint",
+    "--target_datasets",
+    "--train_limit",
+    "--source_val_limit",
+    "--bcd_score_mode",
+    "--cmct_adaptive_floor_scale",
+    "--clip_cache_dir",
+    "--enable_component_gate",
+    "--component_gate_checkpoint",
+    "--component_gate_keep_threshold",
+    "--component_gate_protect_area_ratio",
+    "--building_support_threshold",
+    "--damage_confidence_threshold",
+    "--serious_damage_threshold",
+    "--tile_size",
+    "--tile_stride",
+    "--seed",
+)
+
+
+def xbd_frozen_model_args() -> list[str]:
+    """The frozen xBD BDA model/threshold flags of the instance export.
+
+    ``xbd_command`` keeps its original literal argument block: the pixel route is
+    the frozen reference and must not be rewritten.  ``tests/test_xbd_instance_export.py``
+    asserts that both commands still agree on every one of these flags, so the
+    two entry points cannot drift into running different model configurations.
+    """
+    return [
+        "--checkpoint", str(CHANGE_ADAPTER_CHECKPOINT),
+        "--sam3_checkpoint", str(SAM3_CHECKPOINT),
+        "--load_checkpoint", str(SCORE_ADAPTER_CHECKPOINT),
+        "--target_datasets", "xBD",
+        "--train_limit", "0",
+        "--source_val_limit", "0",
+        "--bcd_score_mode", "head",
+        "--cmct_adaptive_floor_scale", "0.75",
+        "--clip_cache_dir", str(CLIP_CACHE_DIR),
+        "--enable_component_gate",
+        "--component_gate_checkpoint", str(GATE_ADAPTER_CHECKPOINT),
+        "--component_gate_keep_threshold", "0.60",
+        "--component_gate_protect_area_ratio", "0.04",
+        "--building_support_threshold", "0.10",
+        "--damage_confidence_threshold", "0.10",
+        "--serious_damage_threshold", "0.20",
+        "--tile_size", "512",
+        "--tile_stride", "512",
+        "--seed", "2026",
+    ]
 
 
 def semantic_command(
@@ -69,6 +127,7 @@ def semantic_command(
         "--component_gate_source_classes", "Bareland,Grass,Road,Tree,Water,Cropland,Building",
         "--component_gate_feature_mode", "full",
         "--component_gate_keep_threshold", "0.60",
+        "--component_gate_protect_area_ratio", "0.04",
         "--cmct_enable_multilabel_onepass",
         "--seed", "2026",
     ]
@@ -114,6 +173,7 @@ def xbd_command(
         "--enable_component_gate",
         "--component_gate_checkpoint", str(GATE_ADAPTER_CHECKPOINT),
         "--component_gate_keep_threshold", "0.60",
+        "--component_gate_protect_area_ratio", "0.04",
         "--building_support_threshold", "0.10",
         "--damage_confidence_threshold", "0.10",
         "--serious_damage_threshold", "0.20",
@@ -125,6 +185,38 @@ def xbd_command(
         cmd.extend(["--no_save_vis", "--no_save_pred_clf"])
     cmd.extend(extra_args)
     return cmd
+
+
+def xbd_instance_command(
+    manifest: Path,
+    output_dir: Path,
+    method_name: str = "cogvis_xbd_bda_instance_adapted",
+    split: str = "test_cross_event",
+    limit: int = 0,
+    offset: int = 0,
+    python: str = sys.executable,
+    extra_args: Iterable[str] = (),
+) -> list[str]:
+    """Native instance export over the frozen BDA forward (same model flags).
+
+    ``manifest`` is the materialised input manifest (pre_rgb / post_rgb /
+    valid_mask ``.npy`` paths), not the published pair manifest: decoding belongs
+    to the materialisation step, so this route has a single input source.
+    """
+    return [
+        python,
+        str(LOCKED_RUNTIME / "xbd_instance_export.py"),
+        "--xbd_prompt_profile", "collapse_heavy",
+        "--xbd_prompt_profile_json", str(XBD_PROMPTS),
+        *xbd_frozen_model_args(),
+        "--manifest", str(manifest),
+        "--instance-output-dir", str(output_dir),
+        "--method-name", method_name,
+        "--split", split,
+        "--limit", str(limit),
+        "--offset", str(offset),
+        *extra_args,
+    ]
 
 
 def xbd_merge_command(

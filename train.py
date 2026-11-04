@@ -387,6 +387,7 @@ def gate_adapter_plan(
         "--component_gate_lr", "0.001",
         "--component_gate_weight_decay", "0.0001",
         "--component_gate_keep_threshold", "-1",
+        "--component_gate_protect_area_ratio", "0.04",
         "--component_gate_threshold_grid", "0.20:0.80:0.05",
         "--component_gate_select_metric", "IoU",
         "--component_gate_min_recall", "0.45",

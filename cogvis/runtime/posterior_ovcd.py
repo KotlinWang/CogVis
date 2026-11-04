@@ -44,13 +44,23 @@ def _as_hw(tensor: torch.Tensor, h: int, w: int) -> torch.Tensor:
     return tensor.clamp(0, 1)
 
 
-def prompt_score_from_state(processor, state: Dict, prompt: str) -> Tuple[torch.Tensor, torch.Tensor]:
+def prompt_score_from_state(
+    processor,
+    state: Dict,
+    prompt: str,
+    capture: Optional[List[Dict[str, object]]] = None,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """Run one SAM3 prompt and return a dense concept score plus presence.
 
     Sam3Processor stores probabilities despite names such as masks_logits and
     semantic_mask_logits. object_score is already presence-gated in this local
     SAM3 implementation, so we apply presence to the semantic branch and use
     object_score directly for the instance branch.
+
+    ``capture`` (opt-in) records the raw per-mask SAM3 grounding output of this
+    prompt.  It must be read here and not later: ``set_text_prompt`` overwrites
+    ``state["masks"]``/``state["scores"]``/``state["boxes"]`` on the very next
+    prompt, so any later reader would only see the last prompt of the bank.
     """
     h = state["original_height"]
     w = state["original_width"]
@@ -58,6 +68,9 @@ def prompt_score_from_state(processor, state: Dict, prompt: str) -> Tuple[torch.
 
     processor.reset_all_prompts(state)
     state = processor.set_text_prompt(state=state, prompt=prompt)
+
+    if capture is not None:
+        capture.append(_capture_grounding(state, prompt))
 
     presence = state["presence_score"].float().reshape(()).clamp(0, 1)
 
@@ -79,13 +92,42 @@ def prompt_score_from_state(processor, state: Dict, prompt: str) -> Tuple[torch.
 
 
 @torch.no_grad()
+def _capture_grounding(state: Dict, prompt: str) -> Dict[str, object]:
+    """Snapshot the raw SAM3 grounding output of the prompt currently in ``state``."""
+    masks = state.get("masks")
+    scores = state.get("object_score")
+    boxes = state.get("boxes")
+    if masks is None or scores is None:
+        return {
+            "prompt": prompt,
+            "masks": torch.zeros((0, state["original_height"], state["original_width"]), dtype=torch.bool),
+            "scores": torch.zeros((0,), dtype=torch.float32),
+            "boxes": torch.zeros((0, 4), dtype=torch.float32),
+        }
+    if masks.ndim == 4:
+        masks = masks.squeeze(1)
+    return {
+        "prompt": prompt,
+        "masks": masks.detach().to(dtype=torch.bool).cpu(),
+        "scores": scores.detach().float().reshape(-1).cpu(),
+        "boxes": (boxes.detach().float().reshape(-1, 4).cpu() if boxes is not None
+                  else torch.zeros((int(masks.shape[0]), 4), dtype=torch.float32)),
+    }
+
+
+@torch.no_grad()
 def extract_class_scores(
     processor,
     state: Dict,
     prompt_bank: Dict[str, List[str]],
     class_names: Optional[Iterable[str]] = None,
+    capture: Optional[Dict[str, List[Dict[str, object]]]] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Return class-level SAM3 fused scores [C,H,W] and presence [C]."""
+    """Return class-level SAM3 fused scores [C,H,W] and presence [C].
+
+    ``capture`` (opt-in) maps each class name to the raw per-prompt grounding
+    snapshots of that class, taken while the prompt is still live in ``state``.
+    """
     if class_names is None:
         class_names = list(prompt_bank.keys())
     class_names = list(class_names)
@@ -98,8 +140,11 @@ def extract_class_scores(
     for name in class_names:
         score_c = torch.zeros((h, w), device=device, dtype=torch.float32)
         presence_c = torch.zeros((), device=device, dtype=torch.float32)
+        class_capture = None if capture is None else capture.setdefault(name, [])
         for prompt in prompt_bank[name]:
-            score_p, presence_p = prompt_score_from_state(processor, state, prompt)
+            score_p, presence_p = prompt_score_from_state(
+                processor, state, prompt, capture=class_capture,
+            )
             score_c = torch.maximum(score_c, score_p)
             presence_c = torch.maximum(presence_c, presence_p)
         class_scores.append(score_c)

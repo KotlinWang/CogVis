@@ -1265,7 +1265,7 @@ def main() -> None:
     parser.add_argument("--component_gate_topk_ratio", type=float, default=0.2)
     parser.add_argument("--component_gate_min_area", type=int, default=8)
     parser.add_argument("--component_gate_max_area", type=int, default=262144)
-    parser.add_argument("--component_gate_protect_area_ratio", type=float, default=0.02)
+    parser.add_argument("--component_gate_protect_area_ratio", type=float, default=0.04)
     parser.add_argument("--component_gate_label_overlap", type=float, default=0.30)
     parser.add_argument("--component_gate_label_gt_cover", type=float, default=0.05)
     parser.add_argument("--component_gate_label_min_pixels", type=int, default=8)
