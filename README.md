@@ -33,6 +33,7 @@
 
 ## 🔥 News
 
+- **`2026-11-04`**: 🚀 Updated the code release with the paper-locked `eta_a = 0.04` large-region protection, aligned runtime defaults, and an optional native xBD instance export.
 - **`2026-08-06`**: 📄 The CogVis paper is now available on [arXiv](https://arxiv.org/abs/2608.06150), together with refreshed documentation and visual identity.
 - **`2026-08-04`**: Released seven-benchmark inference, staged adapter training, and paper-locked prompt profiles.
 
