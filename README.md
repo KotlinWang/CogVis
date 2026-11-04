@@ -45,7 +45,7 @@ CogVis reformulates Open-Vocabulary Change Detection as a scene-first **percepti
 
 ## 📊 Results
 
-Results reported in the [CogVis paper](https://arxiv.org/abs/2608.06150):
+Updated results with the released configuration (mean over five seeds, 2026-10-28); the manuscript's single-checkpoint table is reported in the [CogVis paper](https://arxiv.org/abs/2608.06150):
 
 <table align="center">
   <thead>
@@ -64,59 +64,61 @@ Results reported in the [CogVis paper](https://arxiv.org/abs/2608.06150):
       <td align="left">SECOND</td>
       <td align="center">mIoU</td>
       <td align="center">31.67</td>
-      <td align="center"><strong>32.48</strong></td>
-      <td align="center"><strong>+0.81</strong></td>
+      <td align="center"><strong>32.36</strong></td>
+      <td align="center"><strong>+0.69</strong></td>
     </tr>
     <tr>
       <td align="left">Semantic CD</td>
       <td align="left">SCSCD</td>
       <td align="center">mIoU</td>
       <td align="center">23.22</td>
-      <td align="center"><strong>25.36</strong></td>
-      <td align="center"><strong>+2.14</strong></td>
+      <td align="center"><strong>26.38</strong></td>
+      <td align="center"><strong>+3.16</strong></td>
     </tr>
     <tr>
       <td align="left">Binary CD</td>
       <td align="left">CLCD</td>
       <td align="center">IoU</td>
       <td align="center">31.48</td>
-      <td align="center"><strong>33.67</strong></td>
-      <td align="center"><strong>+2.19</strong></td>
+      <td align="center"><strong>34.70</strong></td>
+      <td align="center"><strong>+3.22</strong></td>
     </tr>
     <tr>
       <td align="left">Binary CD</td>
       <td align="left">DSIFN</td>
       <td align="center">IoU</td>
       <td align="center">47.55</td>
-      <td align="center"><strong>48.50</strong></td>
-      <td align="center"><strong>+0.95</strong></td>
+      <td align="center"><strong>50.36</strong></td>
+      <td align="center"><strong>+2.81</strong></td>
     </tr>
     <tr>
       <td align="left">Binary CD</td>
       <td align="left">LEVIR-CD</td>
       <td align="center">IoU</td>
       <td align="center">72.50</td>
-      <td align="center"><strong>72.55</strong></td>
-      <td align="center"><strong>+0.05</strong></td>
+      <td align="center"><strong>73.87</strong></td>
+      <td align="center"><strong>+1.37</strong></td>
     </tr>
     <tr>
       <td align="left">Binary CD</td>
       <td align="left">WHU-CD</td>
       <td align="center">IoU</td>
       <td align="center">75.72</td>
-      <td align="center"><strong>75.86</strong></td>
-      <td align="center"><strong>+0.14</strong></td>
+      <td align="center"><strong>78.23</strong></td>
+      <td align="center"><strong>+2.51</strong></td>
     </tr>
     <tr>
       <td align="left">Damage assessment</td>
       <td align="left">xBD</td>
       <td align="center">mIoU</td>
       <td align="center">24.51</td>
-      <td align="center"><strong>32.68</strong></td>
-      <td align="center"><strong>+8.17</strong></td>
+      <td align="center"><strong>32.62</strong></td>
+      <td align="center"><strong>+8.11</strong></td>
     </tr>
   </tbody>
 </table>
+
+<p align="center"><sub>Means over seeds 2026–2030; sample SDs (ddof=1) are 0.14, 0.35, 1.12, 0.38, 0.24, 0.52, and 0.05 for SECOND, SCSCD, CLCD, DSIFN, LEVIR-CD, WHU-CD, and xBD. This is the new locked-protocol five-seed series; the manuscript's original single-checkpoint table is retained in the paper.</sub></p>
 
 ![Qualitative comparison across seven benchmarks](./assets/qualitative_results.png)
 
