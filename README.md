@@ -154,31 +154,39 @@ Model weights are intentionally excluded from Git. Place the following files und
     <tr>
       <th align="left">Checkpoint</th>
       <th align="left">Component</th>
+      <th align="left">Download</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td align="left"><code>change_adapter.pt</code></td>
       <td align="left">Scene Change Perceptron</td>
+      <td align="left"><a href="https://drive.google.com/file/d/15X81-fZJYxe8InOPTpxLZTQ0PbZ5w9M7/view?usp=drive_link">Google Drive</a></td>
     </tr>
     <tr>
       <td align="left"><code>score_adapter.pt</code></td>
       <td align="left">Semantic Memory Calibrator</td>
+      <td align="left"><a href="https://drive.google.com/file/d/1Yf9s8KbfHAjKuMIcg-XTwdL9x8ALrrdw/view?usp=drive_link">Google Drive</a></td>
     </tr>
     <tr>
       <td align="left"><code>gate_adapter.pt</code></td>
       <td align="left">Adaptive Region Filter</td>
+      <td align="left"><a href="https://drive.google.com/file/d/1P12uZ8t9zei961HzH5Kdnop1zkWyX9cj/view?usp=drive_link">Google Drive</a></td>
     </tr>
     <tr>
       <td align="left"><code>sam3.pt</code></td>
       <td align="left">Frozen SAM3 backbone</td>
+      <td align="left"><a href="https://huggingface.co/facebook/sam3">Official SAM 3</a></td>
     </tr>
     <tr>
       <td align="left"><code>ViT-B-16.pt</code></td>
       <td align="left">Frozen CLIP encoder</td>
+      <td align="left"><a href="https://openaipublic.azureedge.net/clip/models/5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f/ViT-B-16.pt">Official CLIP</a></td>
     </tr>
   </tbody>
 </table>
+
+<p align="center"><sub>SAM 3 is a gated Hugging Face repository: request access and authenticate before downloading <code>sam3.pt</code>. The CLIP link is OpenAI's official ViT-B/16 checkpoint.</sub></p>
 
 Use a custom checkpoint directory when needed:
 
